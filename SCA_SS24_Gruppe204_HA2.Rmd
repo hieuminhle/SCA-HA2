@@ -1,0 +1,595 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+HAUSAUFGABE 2 BEFINDET SICH AB ZEILE 312
+
+
+ _    _   _______     ___
+| |  | | |  ___  |   |_  |
+| |__| | | |   | |     | |
+|  __  | | |___| |     | |
+| |  | | |  ___| |     | |
+|_|  |_| |_|   |_|     |_|
+HIER IST HAUSAUFGABE 1. HAUSAUFGABE 2 IST AB ZEILE 312 BZW SEITE 15 IN PDF
+
+
+
+** Teil A) Übersicht verschaffen **
+
+1) Importieren Sie die zwei Datensätze und speichern Sie diese als Variablen mit passenden Namen. Geben Sie die
+Struktur von jeder Variable aus. Bewertungsrelevant: Input, Output.
+```{r}
+## Speichern der Datensätze als Variablen
+services = read.csv2("output_services_v0025.csv")
+transactions = read.csv2("output_transactions_v0025.csv")
+## Ausgabe ihrer Struktur
+print("Struktur der Services")
+str(services)
+print("Struktur der Transactions")
+str(transactions)
+```
+2) Entfernen Sie alle Datenpunkte, die ausserhalb der Zeitspanne von 2019 bis 2023 liegen. Geben Sie anschliessend
+die Zusammenfassung der Variablen aus. Bewertungsrelevant: Output.
+```{r}
+## Ausfilterung aller Datenpunkte außerhalb 2019 bis 2023
+services_2019_to_2023 = subset(services, Year >= 2019 & Year <= 2023)
+transactions_2019_to_2023 = subset(transactions, Year >= 2019 & Year <= 2023)
+## Ausgabe der Zusammenfassung der Variablen
+print("Zusammenfassung der gefilterten Services")
+summary(services_2019_to_2023)
+print("Zusammenfassung der gefilterten Transactions")
+summary(transactions_2019_to_2023)
+```
+3) Extrahieren Sie aus den Transaktionsdaten eine Liste aller Supermärkte, in der jeder Supermarkt nur einmal
+enthalten ist. Beachten Sie ggf. diesen Link. Bewertungsrelevant: Input, Output.
+```{r}
+# Liste aller Supermärkte
+list_supermarkets = unique(transactions_2019_to_2023$storename)
+print("Liste der Supermärkte:")
+list_supermarkets
+```
+4) Extrahieren Sie aus den Servicedaten eine Tabelle aller 20 Logistikdienstleister mitsamt deren Dienstleistungen.
+Jeder Logistikdienstleister soll in der Liste nur einmal enthalten sein. Sortieren Sie die Tabelle nach Warehousing‐
+Dienstleister und Shipping‐Dienstleister. Bewertungsrelevant: Input, Output.
+```{r}
+# Extraktion aller Logistikdienstleister mitsamt deren Dienstleistungen
+all_vendors = select(services_2019_to_2023, vendor, service)
+# Filterung der einzigartigen Dienstleister
+list_vendors = distinct(all_vendors, vendor, .keep_all = TRUE)
+# Sortieren der Dienstleister
+list_vendors[order(list_vendors$service, decreasing = TRUE), ]
+```
+5) Extrahieren Sie aus den Transaktionsdaten eine Tabelle aller existierenden Produkte in Südkorea, in der jedes
+Produkt nur einmal enthalten ist. Bewertungsrelevant: Input, Output.
+```{r}
+# Extraktion aller Produkte in Korea
+all_products_in_kr = filter(transactions_2019_to_2023, region == "Skorea")
+# Ausfilterung der nicht relevanten Spalten
+all_products_in_kr = select(all_products_in_kr, Product, region)
+# Filterung der einzigartigen Produkte
+list_products_in_kr = distinct(all_products_in_kr, Product, .keep_all = TRUE)
+list_products_in_kr
+```
+** Teil B) Marktübersicht **
+6) Erstellen Sie eine Tabelle mit den Marktanteilen (an den tatsächlich verkauften Mengen) der jeweiligen Produkte.
+Interpretieren Sie diese Tabelle kurz. Wie viele Flaschen Limonade haben Sie im gesamten Zeitraum verkauft?
+Bewertungsrelevant: Output, Kommentar.
+```{r}
+## Erstellung einer Tabelle mit den Marktanteilen der jeweiligen Produkte
+# Berechnung der gesamten Anzahl an verkauften Produkten
+total_sold = sum(transactions_2019_to_2023$Sales)
+# Berechnung der verkauften Mengen jedes Produktes
+sold_products = aggregate(transactions_2019_to_2023$Sales, list(transactions_2019_to_2023$Product), FUN=sum) 
+names(sold_products) = c("Products", "Sales")
+# Berechnung der Marktanteilen der jeweiligen Produkte
+sold_products["Market Share"] = sold_products$Sales/total_sold
+sold_products
+## Intepretation der Tabelle
+# "Gruppe201" ist das beliebteste Produkt.Jedoch haben alle Produkte ungefähr gleichen Marktanteilen, nämlich jeweils  12% bis 12,3%.
+# Erstaunlicherweise sind circa 2,7% der Produkte verlorgen gegangen.
+## Wie viele Flaschen Limonade haben im gesamten Zeitraum verkauft? (ist genau die Anzahl an verkauften Produkten)
+sprintf("Die gesamte Anzahl an verkauften Flaschen Limonade ist %d", total_sold)
+```
+7) Erstellen Sie eine Tabelle, um einen Überblick über den Absatz Ihres Produktes in den fünf verschiedenen Regio‐
+nen zu erhalten. Die Tabelle sollte folgende Spalten aufweisen: Region und gesamte Absatzmenge. Wie ist der
+prozentuale Unterschied zwischen der absatzstärksten und der absatzschwächsten Region? Bewertungsrelevant:
+Output, Kommentar.
+```{r}
+## Erstellung einer Tabelle über den Produktabsatz in den Regionen
+# Berechnung der Anzahl an verkauften Produkten in jeder Region
+sales_by_region = aggregate(transactions_2019_to_2023$Sales, list(transactions_2019_to_2023$region), FUN=sum) 
+colnames(sales_by_region) = c("region", "Sales")
+# Berechnung des Prozente 
+sales_by_region["Percentage"] = sales_by_region$Sales/total_sold
+sales_by_region
+## Unterschied zwischen der stärksten und der schwächsten Region
+# Alle 5 Regionen haben gleichmäßigen Prozensatz, jeweils circa 20%
+# Die stärkste Region ist Japan mit 20,15328%, während die schwächste Korea ist mit 19,73652%. 
+# Somit liegt der prozentuale Unterschied bei 0,41676%.
+```
+8) Berechnen Sie für jedes Jahr den Marktanteil Ihres Produkts (an der tatsächlich verkauften Menge). Wie hat sich
+der Marktanteil in den letzten Jahren entwickelt? Bewertungsrelevant: Output, Kommentar.
+```{r}
+transactions_2019_to_2023 <- subset(transactions, Year >= 2019 & Year <= 2023)
+## Berechnung des Marktanteils des Produktes "Gruppe204" für jedes Jahr
+market_share_per_year <- transactions_2019_to_2023 %>%
+  group_by(Year) %>%
+  summarise(
+    total_sales = sum(Sales),
+    product_sales = sum(Sales[Product == "Gruppe204"])
+  ) %>%
+  mutate(market_share = product_sales / total_sales)
+print(market_share_per_year)
+## Analyse: Der Marktanteil des Produkts hat sich über die fünf Jahre nur geringfügig verändert. 
+#Es gab einen leichten Anstieg von 2019 bis 2020, danach blieb der Marktanteil relativ stabil bis 2021. 
+#In den Jahren 2022 und 2023 ist ein kleiner Rückgang zu verzeichnen. 
+#Insgesamt zeigt der Marktanteil eine leichte Abwärtsbewegung, bleibt aber über die Jahre relativ stabil bei etwa 12%.
+```
+9) Berechnen Sie den durchschnittlichen Absatz Ihres Produkts je Kalendermonat. Nennen Sie daraufhin den Monat
+mit dem höchsten durchschnittlichen Absatz. Bewertungsrelevant: Output, Kommentar.
+```{r}
+## Berechnung des durchschnittlichen Absatzes je Kalendarmonates
+average_monthly_sales <- transactions_2019_to_2023 %>%
+  group_by(Month) %>%
+  summarise(average_sales = mean(Sales[Product == "Gruppe204"]))
+print(average_monthly_sales)
+## Nennung des Monats mit dem höchsten durchschnittlichen Absatzes
+max_sales_month <- average_monthly_sales %>%
+  filter(average_sales == max(average_sales))
+print(max_sales_month)
+```
+
+
+
+
+
+** Teil C) Umsatz, Kosten und Profit **
+10) Berechnen Sie Ihren Gesamtumsatz, Ihre Gesamtkosten und Ihren Gesamtprofit im Betrachtungszeitraum. Be‐
+wertungsrelevant: Output. Berechnen Sie ihren Umsatz und ihre Gesamtkosten im Betrachtungszeitraum. (Zur
+Vereinfachung werden nur die Kosten für die Produktion und Transport zu den Großlägern betrachtet). Wie viel
+Profit konnten Sie erwirtschaften? Bewertungsrelevant: Output, Kommentar.
+```{r}
+price_per_bottle <- 3.90
+cost_per_bottle <- 0.60
+# Berechnung des Umsatzes, der Gesamtkosten und des Gesamtprofites
+total_revenue <- sum(transactions_2019_to_2023$Sales[transactions_2019_to_2023$Product == "Gruppe204"]) * price_per_bottle
+total_cost <- sum(transactions_2019_to_2023$Sales[transactions_2019_to_2023$Product == "Gruppe204"]) * cost_per_bottle
+total_profit <- total_revenue - total_cost
+# Ausgabe der Ergenisse
+cat("Gesamtumsatz:", total_revenue, "\n")
+cat("Gesamtkosten:", total_cost, "\n")
+cat("Gesamtprofit:", total_profit, "\n")
+```
+11) Erstellen Sie eine Grafik, in der Ihr Profit für das Jahr 2023 auf Monatsebene dargestellt ist. Heben Sie die Monate
+mit dem grössten und kleinsten Profit passend farbig hervor. Bewertungsrelevant: Output.
+Hinweis: Es könnte hilfreich sein, zunächst ein Dataframe mit den passenden Daten zu erstellen.
+```{r}
+# Berechnung des monatlichen Profites
+transactions_2023 <- subset(transactions_2019_to_2023, Year == 2023)
+monthly_profit_2023 <- transactions_2023 %>%
+  group_by(Month) %>%
+  summarise(
+    total_sales = sum(Sales[Product == "Gruppe204"]),
+    revenue = total_sales * price_per_bottle,
+    cost = total_sales * cost_per_bottle,
+    profit = revenue - cost
+  )
+# Bestimmung der Monate mit dem größten und kleinsten Profit
+max_profit_month <- monthly_profit_2023 %>% filter(profit == max(profit))
+min_profit_month <- monthly_profit_2023 %>% filter(profit == min(profit))
+# Darstellung des monatlichen Profites
+ggplot(monthly_profit_2023, aes(x = Month, y = profit)) +
+  geom_line() +
+  geom_point(data = max_profit_month, aes(x = Month, y = profit), color = "green", size = 3) +
+  geom_point(data = min_profit_month, aes(x = Month, y = profit), color = "red", size = 3) +
+  ggtitle("Monthly Profit for 2023") +
+  xlab("Month") +
+  ylab("Profit") +
+  theme_minimal()
+```
+12) Erstellen Sie eine Grafik, in der Ihre Kosten über den gesamten Zeitraum für Transportdienstleistungen abge‐
+bildet sind. Die Grafik soll einen Vergleich der Regionen ermöglichen. Für jede Region soll ersichtlich werden:
+(1) Wie viel wurde für pünktliche Transportdienstleistungen ausgegeben und (2) wie viel wurde für verspätete
+Transportdienstleistungen ausgegeben. Interpretieren Sie die Grafik. Bewertungsrelevant: Output, Kommentar.
+```{r}
+# Berechnung der Kosten für Transportdienstleistungen
+transport_costs <- services_2019_to_2023 %>%
+  filter(service == "Shipping") %>%
+  group_by(region, DaysExecuted <= 2) %>%
+  summarise(total_cost = sum(cost))
+# Umbenennung der Gruppe
+transport_costs <- transport_costs %>%
+  mutate(on_time = ifelse(`DaysExecuted <= 2`, "On Time", "Late"))
+# Darstellung der Kosten nach Region 
+ggplot(transport_costs, aes(x = region, y = total_cost, fill = on_time)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  ggtitle("Kosten nach Region") +
+  xlab("Region") +
+  ylab("Gesamtkosten") +
+  scale_fill_manual(values = c("On Time" = "blue", "Late" = "red")) +
+  theme_minimal()
+```
+** Teil D) Bewertung der DLI **
+13) Nennen Sie eine geeignete Kennzahl zur Bewertung Ihrer Shipping‐Dienstleister. Beachten Sie dabei, was die
+Qualiteat der Shipping‐Dienstleister ausmacht. Begründen Sie die Wahl der Kennzahl kurz. Erstellen Sie ein Sub‐
+set der Services Tabelle mit allen Shipping‐Dienstleistungen. Berechnen Sie ihre gewählte Kennzahl für alle Di‐
+enstleistungen als zusätzliche Variable in dieser Tabelle. Berechnen Sie daraufhin die durchschnittliche Kennzahl
+der Shipping‐Dienstleister im Jahr 2023. Geben Sie Ihre Ergebnisse in einer Tabelle aus, in der die Kennzahl‐Werte
+absteigend sortiert sind. Bewertungsrelevant: Kommentar, Code, Output.
+```{r}
+# Eine geeignete Kennzahl dafür ist der Prozentsatzes der punktlichen Lieferung von jedem Diensleister. 
+# Damit wird festgestellt, welcher Dienstleister am häufigsten die Produkte punktlich liefert
+# Berechnung des Prozensatzes der punktlichen Lieferung von jedem Dienstleister
+shipping_evaluation <- services_2019_to_2023 %>%
+  filter(service == "Shipping") %>%
+  group_by(vendor) %>%
+  summarise(
+    total_deliveries = n(),
+    on_time_deliveries = sum(DaysExecuted <= 2),
+    on_time_percentage = on_time_deliveries / total_deliveries * 100
+  ) %>%
+  arrange(desc(on_time_percentage))
+print(shipping_evaluation)
+```
+14) Nennen Sie eine geeignete Kennzahl zur Bewertung Ihrer Warehousing‐Dienstleister. Beachten Sie dabei, was
+die Qualiteat der Warehousing‐Dienstleister ausmacht. Begründen Sie die Wahl der Kennzahl kurz. Erstellen
+Sie ein Subset der Services Tabelle mit allen Warehousing‐Dienstleistungen. Berechnen Sie ihre ausgewählte
+Kennzahl für alle Dienstleistungen als zusätzliche Variable in dieser Tabelle. Berechnen Sie anschließend die
+durchschnittliche Kennzahl für die Warehousing‐Dienstleister für die Dienstleistungen an Ihrem Produkt über die
+gesamte Laufzeit (5 Jahre). Geben Sie Ihre Ergebnisse in einer Tabelle aus, in der die Kennzahl‐Werte absteigend
+sortiert sind. Bewertungsrelevant: Kommentar, Code, Output.
+```{r}
+## Eine geeignet Kennzahl dazu ist der Prozentsatz der Anfragen, bei denen sich QExecuted und QScheduled übereinstimmen.
+# Wenn diese zwei Attribute bei demselben Wert liegen, dann wird die richtige Menge der Produkte abgefertigt. 
+# Daher kann mit dieser Kennzahl die Qualität der Dienstleister bewertet werden.
+# Filterung der Warehousing-DL und Berechnung des Genauigkeitsprozensatzes
+warehousing_evaluation <- services_2019_to_2023 %>%
+  filter(service == "Warehousing") %>%
+  group_by(vendor) %>%
+  summarise(
+    total_requests = n(),
+    accurate_fulfillments = sum(QExecuted == QScheduled),
+    accuracy_percentage = accurate_fulfillments / total_requests * 100
+  ) %>%
+  arrange(desc(accuracy_percentage))
+# Ausgabe der Ergebnisse
+print(warehousing_evaluation)
+```
+15) Visualisieren Sie in geeigneter Form die gewählte Qualitätskennzahl der Warehouse‐Dienstleister in einem ggplot
+(bezogen auf alle Produkte) im Jahr 2023. Durch die Visualisierung soll eine differenzierte Vergleichbarkeit der
+Dienstleister möglich sein. Wie bewerten Sie die Qualität der Warehousing‐DL insgesamt? Bewertungsrelevant:
+Output, Kommentar.
+```{r}
+# Filterung der Warehousing-DL im Jahr 2023
+warehousing_2023 <- services_2019_to_2023 %>%
+  filter(service == "Warehousing" & Year == 2023)
+print(warehousing_2023)
+# Berechnung des Genauigkeitsprozensatzes für jeden Dienstleister im Jahr 2023 
+warehousing_accuracy_2023 <- warehousing_2023 %>%
+  group_by(vendor) %>%
+  summarise(
+    total_requests = n(),
+    accurate_fulfillments = sum(QExecuted == QScheduled),
+    accuracy_percentage = accurate_fulfillments / total_requests * 100
+  )
+print(warehousing_accuracy_2023)
+# Darstellung des Genauigkeitsprozensatzes 
+ggplot(warehousing_accuracy_2023, aes(x = reorder(vendor, accuracy_percentage), y = accuracy_percentage)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ggtitle("Genauigkeitsprozensatzes der Dienstleister") +
+  xlab("Vendor") +
+  ylab("Genauigkeit") +
+  theme_minimal()
+## Von der Analyse wird festgestellt, dass die Genauigkeit sehr niedrig ist bzw. die Qualität der DL ganz schlecht ist.
+# Über den gesamten Zeitraum (2019-2023) ist die Genauigkeit bei der Hälfte der DLn nur zwischen 1,8% und 3,8%.
+# Bei den anderen DLn ist die Genauigkeit sogar bei 0, also diese DL haben gar keine Anfrage genau bearbeitet.
+# Im Jahr 2023 ist die Qualität der DL noch schlimmer.
+# Bei DWL und Flying Mercury gibt es nur eine Anfrage, die genau bearbeitet wurde wie geplant.
+# Bei anderen Dienstleistern gibt es gar keine solche Anfrage.
+```
+
+
+
+
+
+
+HAUSAUFGABE2 AB HIER
+
+ _    _   _______     _____
+| |  | | |  ___  |   |___  |
+| |__| | | |   | |    ___| |
+|  __  | | |___| |   | ____|
+| |  | | |  ___  |   | |___
+|_|  |_| |_|   |_|   |_____|
+
+
+
+
+
+
+
+
+
+Laden von Packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(plotly)
+```
+** Daten vorbereiten
+1) Aggregieren Sie die Verkaufszahlen so, dass Sie eine Tabelle mit der Nachfrage je Monat je Region erhalten. Die Nachfrage beinhaltet alle Produkte, einschließlich Lost Sales. Speichern Sie das Dataframe in einer neuen Variable mit dem Namen “Demand” und den Spaltennamen “Region”, “Period” und “Demand”. Geben Sie den Tabellenkopf aus. Bewertungsrelevant: Code, Output.
+Hinweis: Für die folgenden Aufgaben bietet es sich an, eine Variable “Periode” zu erzeugen, die aus dem Jahr und dem Monat (in dieser Reihenfolge und jeweils durch eine Zahl repräsentiert) besteht. Siehe dazu die Dokumentation unter diesem Link und die Dokumentation unter diesem Link.
+```{r}
+# Erstellung der Spalte "Periode" durch die Zusammenführung von Jahr und Monat
+transactions_2019_to_2023$Periode = paste(transactions_2019_to_2023$Year, ifelse(transactions_2019_to_2023$Month < 10, paste("0", transactions_2019_to_2023$Month, sep=""), transactions_2019_to_2023$Month), sep="")
+transactions_2019_to_2023
+
+# Aggregation der Verkaufszahlen und Gruppierung nach Monat und Region
+Demand = transactions_2019_to_2023 %>%
+  group_by(region, Periode) %>%
+  summarise(Demand = sum(Sales))
+
+# Elimination der irrelevanten Spalten
+Demand = select(Demand, c(region, Periode, Demand))
+
+# Umbenennung der Spalten 
+colnames(Demand) = c("Region", "Period", "Demand")
+
+# Ausgabe des Tabellenkopfs
+head(Demand)
+```
+
+2) Wandeln Sie die aggregierten Demand‐Daten vom Long‐Format in das Wide‐Format um. (Für den vorliegenden
+Fall gibt es im Long‐Format drei Spalten: Periode, Region und Demand. Im Wide‐Format gibt es im vorliegenden Fall sechs Spalten: Periode, Demand in Japan, Demand in Peking, Demand in Phlppn, Demand in Shangh, und Demand in Skorea.) Hierfür können Sie die Reshape()‐Funktion nutzen. Infos unter diesem Link (<– bitte anklicken). Geben Sie nur den Tabellenkopf aus. Bewertungsrelevant: Code, Output.
+```{r}
+# Umwandlung der Daten in das Wide-Format
+Demand_wide = dcast(Demand, Period ~ Region, value.var = "Demand")
+head(Demand_wide)
+```
+
+3) Wandeln Sie die aggregierten Verkaufszahlen in den Datentyp time‐series mit Frequenz = 12 um. Jede Demand‐Spalte (jeder Vektor) soll dabei in eine Time Series umgewandelt werden. Dafür benötigt es nur fünf Befehle. Für diese Aufgabe brauchen Sie nichts ausgeben. Bewertungsrelevant: Code. 
+```{r}
+# Umwandlung der Demand-Spalten in Time Series mit Frequenz = 12
+ts_Demand_jp = ts(Demand_wide$Japan, frequency = 12)
+ts_Demand_pe = ts(Demand_wide$Peking, frequency = 12)
+ts_Demand_sh = ts(Demand_wide$Shangh, frequency = 12)
+ts_Demand_ph = ts(Demand_wide$Phlppn, frequency = 12)
+ts_Demand_kr = ts(Demand_wide$Skorea, frequency = 12)
+```
+
+
+** Modellierung vorbereiten
+4) Visualisieren Sie den Nachfrageverlauf aller Regionen in einem einzigen ggplot. Achten Sie auf übersichtliche Achsenbeschriftungen und Legenden. Heben Sie exemplarisch die Region Japan hervor, damit man den Nachfrageverlauf dort gut erkennt (die anderen Regionen müssen nicht unbedingt gut erkennbar, jedoch theoretisch unterscheidbar sein sein). Bewertungsrelevant: Output.
+```{r}
+# Umwandlung der ganzen Daten in Time Series für die Visualisierung des Nachfrageverlaufs
+ts_Demand = ts(Demand_wide, frequency = 12)
+ts_Demand
+
+
+#Konvertieren von Time Series zu einem Data Frame
+df_ts_Demand <- as.data.frame(ts_Demand)
+
+# Hinzufügen der Period-Spalte
+df_ts_Demand$Period <- rownames(df_ts_Demand)
+
+# Umwandlung in das long-Format
+df_ts_Demand_long <- df_ts_Demand %>%
+  pivot_longer(cols = -Period, names_to = "Region", values_to = "Demand")
+
+# Ausgabe der umgewandelten Daten
+df_ts_Demand_long
+
+ggplot() + 
+  geom_line(data = df_ts_Demand_long %>% filter(Region == "Japan"), 
+            aes(x = as.numeric(Period), y = Demand, color = "Japan"), size = 1.5) + 
+  geom_line(data = df_ts_Demand_long %>% filter(Region != "Japan"), 
+            aes(x = as.numeric(Period), y = Demand, color = Region), alpha = 1) + 
+  scale_color_manual(values = c("Japan" = "red", "Peking" = "blue", "Phlppn" = "green", "Shangh" = "purple", "Skorea" = "orange")) +
+  labs(title = "Nachfrageverlauf nach Region",
+       x = "Periode",
+       y = "Nachfrage",
+       color = "Region") +
+  theme_minimal()
+
+
+
+# Hier unten ist der ursprünglichen Code, der irgendwie ab heute Abend (04.06) nicht mehr funktioniert. Daher musste ich den Code von Zeile 369 bis Zeile 392 hinzufügen, der ziemlich kompliziert ist.
+# Visualisierung des Nachfrageverlaufs aller Regionen
+ggplot(ts_Demand, aes(x = Period)) + 
+  geom_line(aes(y = Japan, color = "Japan"), size = 1.5) +  # Japan
+  geom_line(aes(y = Peking, color = "Peking"), alpha = 1) +  # Peking
+  geom_line(aes(y = Phlppn, color = "Phlppn"), alpha = 1) +  # Phlpn
+  geom_line(aes(y = Shangh, color = "Shangh"), alpha = 1) +  # Shangh
+  geom_line(aes(y = Skorea, color = "Skorea"), alpha = 1) +  # Skorea
+  labs(title = "Nachfrageverlauf nach Region",
+       x = "Periode",
+       y = "Nachfrage",
+       color = "Region") +
+  scale_color_manual(values = c("Japan" = "red", "Peking" = "blue", "Phlppn" = "green", "Shangh" = "purple", "Skorea" = "orange")) +
+  theme_minimal()  
+
+```
+
+5) Betrachten Sie die Visualisierung und nehmen Sie zu möglichen Trends und Saisonalitäten für die Region Japan Stellung. Erachten Sie eine Zeitreihenanalyse in diese Fall als sinnvolle Methode, um den Nachfrageverlauf zu modellieren? Angenommen, dies ist der Fall: Welche Annahme müssen sie dann treffen, um die Ergebnisse der Modellierung für Ihr Produkt nutzen zu können? Bewertungsrelevant: Kommentar.
+```{r}
+## Es wird festgestellt, dass die Nachfrage von Januar bis Mai besonders hoch zu sein scheint. Währendessen steigt die Nachfrage ab Juni deutlich ab und erreicht im November ihren Tiefpunkt. Danach erhöht sie sich wieder im Dezember.Dies könnte auf saisonale Faktoren wie Wetterbedingungen zurückzuführen sein.
+
+## Ja, eine Zeitreihenanalyse wäre eine sinnvolle Methode, um den Nachfrageverlauf zu modellieren. Dadruch wird ermöglicht, die saisonalen Muster und Trends in den Daten zu identifizieren und zukünftige Nachfrageprognosen zu erstellen.
+
+## Um die Ergebnisse der Modellierung nutzen zu können, müssen Annahmen getroffen werden, dass die identifizierten Trends und saisonalen Muster stabil bleiben und weiterhin relevant sind. Das heißt, man geht davon aus, dass sich die historischen Muster in der Zukunft fortsetzen werden.
+```
+
+** Modellierung
+6) Nutzen Sie nun Ihre exemplarische Region Japan weiter. Führen Sie mit Hilfe der ets()‐Funktion eine Zeitreihenanalyse durch. Erstellen Sie ein Modell, indem Sie die automatische Festlegung der Modellparameter nutzen (model = “ZZZ”). Geben Sie (1) eine Zusammenfassung des Modells, (2) die ursprüngliche Zeitreihe und (3) die Werte der Residuen aus. Bewertungsrelevant: Code, Output.
+```{r}
+# Zeitreihenanalyse für die Region Japan mit der ets()-Funktion
+japan_demand <- subset(Demand, Region == "Japan")
+japan_ts <- ts(japan_demand$Demand, frequency = 12, start = c(2019, 1))
+# Modell erstellen mit automatischer Parameterfestlegung
+model_japan <- ets(japan_ts, model = "ZZZ")
+ 
+# Ausgabe der Modellzusammenfassung
+summary(model_japan)
+ 
+# Anzeige Ursprüngliche Zeitreihe und Residuen 
+plot(model_japan)
+
+```
+
+7) Geben Sie fuer das Jahr 2023 die durchschnittliche Höhe der Originalwerte sowie die durchschnittliche Höhe der Modellwerte an. Nutzen Sie dafür nur die eben erstellte Modellvariable. Vergleichen Sie anschliessend die Werte. Welche Auswirkungen hätte es gehabt, wenn das Unternehmen im Jahr 2023 das Modell bereits genutzt hätte, um Bestellmengen zu prognostizieren? Bewertungsrelevant: Code, Output, Kommentar.
+```{r}
+# Durchschnittliche Höhe der Original- und Modellwerte für 2023
+japan_2023 <- window(japan_ts, start = c(2023, 1), end = c(2023, 12))
+model_2023 <- window(fitted(model_japan), start = c(2023, 1), end = c(2023, 12))
+ 
+mean_original_2023 <- mean(japan_2023)
+mean_model_2023 <- mean(model_2023)
+ 
+cat("Durchschnittliche Höhe der Originalwerte 2023:", mean_original_2023, "\n")
+cat("Durchschnittliche Höhe der Modellwerte 2023:", mean_model_2023, "\n")
+ 
+## Wenn wir das Modell im Jahr 2023 genutzt hätten, hätten wir präzisere Bestellmengen prognostizieren können, was die Effizienz der Bestandsverwaltung verbessert hätte.
+
+```
+
+8) Erstellen Sie eine Nachfragevorhersage für zwei weitere Jahre. Visualisieren Sie den Nachfrageverlauf sowie den Verlauf Ihres Prognosemodells in einem einzigen ggplot. Begründen Sie die Wahl der Visualisierung. Bewertungsrelevant: Code, Output, Begründung.
+```{r}
+# Erstellung der Nachfragevorhersage für zwei Jahre
+forecast_japan <- forecast(model_japan, h = 24)
+ 
+# Visualisierung der Nachfrageverlauf und des Prognosemodells
+autoplot(forecast_japan) +
+  ggtitle("Nachfragevorhersage für Japan") +
+  xlab("Jahr") + ylab("Nachfrage") +
+  theme_minimal()
+ 
+## Die Wahl der Visualisierung zeigt den Verlauf der tatsächlichen Nachfrage und die prognostizierten Werte klar und deutlich, was die Nachvollziehbarkeit und Entscheidungsfindung erleichtert. Mit diesem Liniengraph kann man sehr klar sehen, wie sich die Nachfrage im Laufe der Zeit entwickelt hat und entwickeln würde.
+
+```
+
+9) Bewerten Sie Ihr Modell aus Aufgabe 6 mit Hilfe von vier verschiedenen Fehler‐Kennzahlen, die Sie aus der Übung kennen. Welche der Fehler‐Kennzahlen halten Sie für geeignet, um die Güte des Modells zu bewerten? Bewertungsrelevant: Output, Kommentar.
+```{r}
+# Berechnung der Fehler-Kennzahlen 
+mfe = mean(residuals(model_japan))
+mae <- mean(abs(residuals(model_japan)))
+mse <- mean(residuals(model_japan)^2)
+rmse <- sqrt(mse)
+mape <- mean(abs(residuals(model_japan) / japan_ts)) * 100
+ 
+cat("MFE:", mfe, "\n")
+cat("MAE:", mae, "\n")
+cat("MSE:", mse, "\n")
+cat("RMSE:", rmse, "\n")
+cat("MAPE:", mape, "%\n")
+ 
+
+## MAPE ist besonders geeignet, da sie die durchschnittliche prozentuale Abweichung der Prognosewerte von den tatsächlichen Werten zeigt, was für die Bewertung der Modellgüte entscheidend ist.
+
+```
+
+10) Vergleichen Sie Ihr Modell insgesamt mit Ihren Vermutungen aus Aufgabe 5. Was stellen Sie fest? Bewertungsrelevant: Kommentar.
+```{r}
+## Das Modell bestätigt die Trends und Saisonalitäten, die in der Aufgabe 5 angenommen wurden. Die Zeitreihenanalyse hat sich als sinnvoll erwiesen, um den Nachfrageverlauf zu modellieren.
+
+```
+
+11) Ihr Kollege Doug und Ihre Kollegin Carrie diskutieren. Doug ist der Meinung, er könnte möglicherweise ein besseres Modell entwickeln als Sie. “Ich habe schonmal bei anderen Modellen die Modellparameter model = "ANA" genutzt, statt model = "ZZZ". Damit hatte ich damals bessere MAPE‐Werte erzielt. Vielleicht ist das hier wieder der Fall?”, überlegt er in der Mittagspause. “Unsinn!”, wirft Carrie bestimmt ein. “Die Modellparameter model = "ZZZ" ergeben immer das optimale Modell. Das ZZZ‐Modell ist auf jeden Fall das Beste.” Vergleichen Sie die Modelle. Wer hat Recht? Bewertungsrelevant: Output, Kommentar.
+```{r}
+# Erstellung des Modells mit "ANA" und Berechnung der Fehler-Kennzahlen
+model_japan_ana <- ets(japan_ts, model = "ANA")
+mfe_ana = mean(residuals(model_japan_ana))
+mae_ana <- mean(abs(residuals(model_japan_ana)))
+mse_ana <- mean(residuals(model_japan_ana)^2)
+rmse_ana <- sqrt(mse)
+mape_ana <- mean(abs(residuals(model_japan_ana) / japan_ts)) * 100
+
+# Erstellung einer Tabelle zum Vergleichen der Modelle
+c(mfe, mae, mse, rmse, mape)
+c(mfe_ana, mae_ana, mse_ana, rmse_ana, mape_ana)
+vergleich <- matrix(c(mfe, mae, mse, rmse, mape, mfe_ana, mae_ana, mse_ana, rmse_ana, mape_ana), ncol=5, byrow=TRUE)
+colnames(vergleich) <- c('MFE','MAE','MSE', 'RMSE', 'MAPE')
+rownames(vergleich) <- c('ZZZ', 'ANA')
+vergleich <- as.table(vergleich)
+vergleich
+
+# Aus der obigen Tabelle wird festgestellt, dass das Modell 'ZZZ' optimal ist. Damit hat Carrie Recht.
+
+
+```
+
+12) Hinweis: Gehen Sie unabhängig der Ergebnisse der letzten Aufgabe davon aus, dass das ZZZ‐Modell das beste Modell ist und weiterhin genutzt wird. Erstellen Sie für die übrigen Regionen ebenso Modelle zur Nachfragevorhersage (d.h. 4 weitere Modelle). Nutzen Sie erneut die automatische Festlegung der Modellparameter (model = "ZZZ"). Berechnen Sie zudem für jedes Modell den MAPE, um den Vergleich der Modelle zu ermöglichen. Nehmen Sie dazu Stellung, welches Modell laut der bewertenden Information das “beste” der fünf Modelle sei. Bewertungsrelevant: Output, Kommentar.
+```{r}
+# Erstellung von Modellen für andere Regionen 
+regions <- unique(Demand$Region)
+regions <- regions[regions != "Japan"]
+ 
+mape_values <- c()
+ 
+for(region in regions) {
+  region_demand <- subset(Demand, Region == region)
+  region_ts <- ts(region_demand$Demand, frequency = 12, start = c(2019, 1))
+  
+  model_region <- ets(region_ts, model = "ZZZ")
+  mape_region <- mean(abs(residuals(model_region) / region_ts)) * 100
+  mape_values <- c(mape_values, mape_region)
+  
+  cat("MAPE für", region, ":", mape_region, "%\n")
+}
+ 
+best_model_region <- regions[which.min(mape_values)]
+cat("Das beste Modell ist für die Region:", best_model_region, "\n")
+## Das beste Modell ist das von Südkorea, weil seine MAPE am niedrigsten ist.
+
+```
+** Abschluss
+13) Ihre Chefin ist begeistert von Ihren fünf Vorhersagemodellen. “Das bedeutet ja, dass wir genau voraussagen
+können, wie viele Flaschen Limonade insgesamt für das zweite Quartal von 2024 benötigt werden!”, sagt sie freudestrahlend. “Können Sie mir dafür eine Zahl nennen?”. Helfen Sie Ihrer Chefin. Bewertungsrelevant: Output, Kommentar.
+```{r}
+# Vorhersage für das zweite Quartal 2024
+forecast_total <- 0
+for(region in regions) {
+  region_demand <- subset(Demand, Region == region)
+  region_ts <- ts(region_demand$Demand, frequency = 12, start = c(2019, 1))
+  
+  model_region <- ets(region_ts, model = "ZZZ")
+  forecast_region <- forecast(model_region, h = 6)  # Vorhersage für die ersten 6 Monate 2024
+  forecast_total <- forecast_total + sum(forecast_region$mean[4:6])  # Zweites Quartal
+}
+
+# Ausgabe der vorgegesagten Zahl an Flaschen Limonade 
+cat("Der vorhergesagte Bedarf für das zweite Quartal 2024 beträgt:", forecast_total, "Flaschen.\n")
+
+```
+
+14) Ihr guter Freund Arthur wohnt in Shanghai und leitet dort die fünf Supermärkte, die Ihre Limonaden‐Marke führen. “Ich habe das Gefühl, im Oktober 2022 haben wir deutlich weniger Flaschen Limonade verkauft, als für den Monat üblich ist!”, sagt er. “Kannst du mir sagen, ob das im nächsten Jahr auch so sein wird?” Helfen Sie Arthur. Bewertungsrelevant: Output, Kommentar.
+```{r}
+# Nachfragevorhersage für Oktober 2023 und Vergleich mit Oktober 2022
+shanghai_demand <- subset(Demand, Region == "Shangh")
+shanghai_ts <- ts(shanghai_demand$Demand, frequency = 12, start = c(2019, 1))
+# Ausgabe der Zeitreihe von Shanghai zum Ermöglichen der Bewertung unten
+print("Zeitreihen von Shanghai")
+shanghai_ts 
+
+# Vorhersage für zwei Jahre
+model_shanghai <- ets(shanghai_ts, model = "ZZZ")
+forecast_shanghai <- forecast(model_shanghai, h = 24)  
+# Ausgabe der Nachfrage im Oktober 2022 und Oktober 2023
+october_2022 = window(shanghai_ts, start = c(2022, 10), end = c(2022,10))
+october_2023 <- window(shanghai_ts, start = c(2023, 10), end = c(2023,10))
+#october_2023 <- window(forecast_shanghai$mean, start = c(2023, 10), end = c(2023,10))
+cat("Verkaufte Flaschen im Oktober 2022: ", sum(october_2022), "\n")
+cat("Verkaufte Flaschen im Oktober 2023: ", sum(october_2023), "\n")
+# Ausgabe der vorhergesagten Nachfrage
+cat("Vorhergesagte (nächstes Fenster)")#, forecast_shanghai, "\n")
+print(forecast_shanghai)
+
+## Die Vorhersage zeigt, dass die Nachfrage im Oktober 2024 voraussichtlich ähnlich wie sein sollte. Auch wenn man die Time-Series von Shanghai betrachtet, kann man auch feststellen, dass die Nachfragen in jedem Oktober 2019 bis 2023 immer ungefähr gleich beträgt.
+
+
+```
+
+
